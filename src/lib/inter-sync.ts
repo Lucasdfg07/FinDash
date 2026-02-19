@@ -236,11 +236,12 @@ async function processTransaction(t: InterTransacao): Promise<void> {
   const dateMax = new Date(date);
   dateMax.setDate(dateMax.getDate() + 2);
 
+  // Busca em TODAS as fontes (inter_api e bank_extract)
+  // pois pode já existir de uma importação anterior
   const existing = await prisma.transaction.findFirst({
     where: {
       amount: amount,
       type: type,
-      source: "inter_api",
       date: {
         gte: dateMin,
         lte: dateMax,
@@ -363,11 +364,14 @@ export interface DeduplicationResult {
  * Critério de duplicata:
  *  - Mesmo valor (amount)
  *  - Mesmo tipo (type)
- *  - Mesma fonte (source = "inter_api")
  *  - Datas dentro de uma janela de ±2 dias
+ *  - Compara entre TODAS as fontes (inter_api, bank_extract, manual)
  * 
- * Quando encontra duplicatas, mantém a que tem categoria atribuída,
- * ou a mais antiga (primeira inserida). Remove as demais.
+ * Quando encontra duplicatas, mantém:
+ *  1. A que tem categoria atribuída
+ *  2. A do bank_extract (dados mais completos/descritivos)
+ *  3. A mais antiga (primeira inserida)
+ * Remove as demais.
  */
 export async function removeDuplicateTransactions(): Promise<DeduplicationResult> {
   const result: DeduplicationResult = {
@@ -376,9 +380,8 @@ export async function removeDuplicateTransactions(): Promise<DeduplicationResult
     details: [],
   };
 
-  // Busca todas as transações da API do Inter, ordenadas por data
+  // Busca TODAS as transações (todas as fontes), ordenadas por data
   const allTransactions = await prisma.transaction.findMany({
-    where: { source: "inter_api" },
     orderBy: [{ date: "asc" }, { createdAt: "asc" }],
   });
 
@@ -411,14 +414,24 @@ export async function removeDuplicateTransactions(): Promise<DeduplicationResult
       if (diffDays > 2) continue;
 
       // É duplicata! Decidir qual manter:
-      // - Preferência 1: a que tem categoria atribuída
-      // - Preferência 2: a mais antiga (pelo createdAt)
+      // Prioridade:
+      //  1. A que tem categoria atribuída
+      //  2. A do "bank_extract" (dados mais completos/descritivos)
+      //  3. A mais antiga (pelo createdAt)
       let toKeep = current;
       let toRemove = candidate;
 
+      // Se candidata tem categoria e current não → manter candidata
       if (!current.categoryId && candidate.categoryId) {
         toKeep = candidate;
         toRemove = current;
+      }
+      // Se ambas sem categoria ou ambas com, preferir bank_extract
+      else if (current.categoryId === candidate.categoryId || (!current.categoryId && !candidate.categoryId)) {
+        if (current.source !== "bank_extract" && candidate.source === "bank_extract") {
+          toKeep = candidate;
+          toRemove = current;
+        }
       }
 
       idsToRemove.add(toRemove.id);

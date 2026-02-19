@@ -129,6 +129,51 @@ async function findOrCreateCategory(
 }
 
 // ═══════════════════════════════════════════════════
+// EXTRAÇÃO DE DESTINATÁRIO (ANTI-FALSO-DUPLICATA)
+// ═══════════════════════════════════════════════════
+
+/**
+ * Extrai o nome do destinatário/remetente de uma transação.
+ * Usado para evitar que transações para pessoas DIFERENTES com
+ * o mesmo valor sejam tratadas como duplicatas (ex: pro-labore de sócios).
+ *
+ * Padrões reconhecidos:
+ *  - bank_extract: "Pix enviado: Gustavo Comin"
+ *  - inter_api recipient: "PIX ENVIADO - Cp :18236120-Lucas Siqueira Fernandes"
+ */
+function extractRecipientName(
+  description: string,
+  recipient?: string | null
+): string | null {
+  // Padrão 1: "Pix enviado: NOME" / "Pix recebido: NOME" / "Pagamento: NOME"
+  const colonMatch = description.match(
+    /(?:enviado|recebido|Pagamento|Aplicação):\s*(.+)/i
+  );
+  if (colonMatch) {
+    const name = colonMatch[1].trim();
+    if (name.length > 3) return name.toUpperCase();
+  }
+
+  // Padrão 2: recipient do Inter API "PIX ENVIADO - Cp :12345-NOME"
+  if (recipient) {
+    const cpMatch = recipient.match(/Cp\s*:\d+-(.+)/i);
+    if (cpMatch) {
+      const name = cpMatch[1].trim();
+      if (name.length > 3) return name.toUpperCase();
+    }
+    // Se recipient é um nome direto (não começa com PIX/PAG/APLICACAO)
+    if (
+      recipient.length > 3 &&
+      !recipient.match(/^(PIX|PAG|APLICAC|CRED |TARIFA|IOF|SIMPLES)/i)
+    ) {
+      return recipient.trim().toUpperCase();
+    }
+  }
+
+  return null;
+}
+
+// ═══════════════════════════════════════════════════
 // SYNC EXTRATO (Transações bancárias)
 // ═══════════════════════════════════════════════════
 
@@ -238,7 +283,7 @@ async function processTransaction(t: InterTransacao): Promise<void> {
 
   // Busca em TODAS as fontes (inter_api e bank_extract)
   // pois pode já existir de uma importação anterior
-  const existing = await prisma.transaction.findFirst({
+  const matches = await prisma.transaction.findMany({
     where: {
       amount: amount,
       type: type,
@@ -249,7 +294,25 @@ async function processTransaction(t: InterTransacao): Promise<void> {
     },
   });
 
-  if (existing) {
+  // Extrai destinatário da transação NOVA (da API)
+  const newRecipient = extractRecipientName(
+    t.titulo || t.descricao,
+    t.descricao
+  );
+
+  for (const existing of matches) {
+    const existingRecipient = extractRecipientName(
+      existing.description,
+      existing.recipient
+    );
+
+    // Se AMBOS têm destinatários identificáveis e são DIFERENTES
+    // → NÃO é duplicata (ex: pro-labore para sócios diferentes)
+    if (newRecipient && existingRecipient && newRecipient !== existingRecipient) {
+      continue;
+    }
+
+    // Caso contrário, é duplicata
     throw new Error("Transaction already exists (dedup: same amount+type within ±2 days)");
   }
 
@@ -412,6 +475,16 @@ export async function removeDuplicateTransactions(): Promise<DeduplicationResult
       const diffDays = diffMs / (1000 * 60 * 60 * 24);
 
       if (diffDays > 2) continue;
+
+      // ── EXCEÇÃO: destinatários diferentes (ex: pro-labore de sócios) ──
+      // Se ambas transações têm nomes identificáveis de destinatários
+      // e esses nomes são DIFERENTES → NÃO é duplicata
+      const name1 = extractRecipientName(current.description, current.recipient);
+      const name2 = extractRecipientName(candidate.description, candidate.recipient);
+
+      if (name1 && name2 && name1 !== name2) {
+        continue;
+      }
 
       // É duplicata! Decidir qual manter:
       // Prioridade:

@@ -18,6 +18,7 @@ import {
   Loader2,
   ArrowDownToLine,
   Calendar,
+  Trash2,
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { format, subMonths } from "date-fns";
@@ -48,6 +49,11 @@ export default function ConfiguracoesPage() {
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncMonths, setSyncMonths] = useState(3);
 
+  // Dedup state
+  const [deduping, setDeduping] = useState(false);
+  const [dedupResult, setDedupResult] = useState<string | null>(null);
+  const [dedupError, setDedupError] = useState<string | null>(null);
+
   const fetchInterStatus = useCallback(async () => {
     try {
       setLoadingStatus(true);
@@ -70,6 +76,36 @@ export default function ConfiguracoesPage() {
   useEffect(() => {
     fetchInterStatus();
   }, [fetchInterStatus]);
+
+  const handleDedup = async () => {
+    setDeduping(true);
+    setDedupResult(null);
+    setDedupError(null);
+
+    try {
+      const res = await fetch("/api/inter/dedup", { method: "POST" });
+      const data = await res.json();
+
+      if (data.success) {
+        if (data.duplicatesRemoved > 0) {
+          setDedupResult(
+            `${data.duplicatesRemoved} transação(ões) duplicada(s) removida(s) de ${data.totalAnalyzed} analisadas.`
+          );
+        } else {
+          setDedupResult(
+            `Nenhuma duplicata encontrada! ${data.totalAnalyzed} transações analisadas.`
+          );
+        }
+        fetchInterStatus();
+      } else {
+        setDedupError(data.error || "Erro desconhecido");
+      }
+    } catch (err) {
+      setDedupError(err instanceof Error ? err.message : "Erro ao remover duplicatas");
+    } finally {
+      setDeduping(false);
+    }
+  };
 
   const handleSync = async () => {
     setSyncing(true);
@@ -462,6 +498,26 @@ export default function ConfiguracoesPage() {
             <RefreshCw size={14} className={loadingStatus ? "animate-spin" : ""} />
             Atualizar Status
           </button>
+
+          <button
+            onClick={handleDedup}
+            disabled={deduping}
+            className="flex items-center gap-2 px-4 py-3 rounded-xl font-medium text-xs transition-all"
+            style={{
+              background: "rgba(239,68,68,0.06)",
+              border: "1px solid rgba(239,68,68,0.2)",
+              color: "#ef4444",
+              cursor: deduping ? "not-allowed" : "pointer",
+              opacity: deduping ? 0.7 : 1,
+            }}
+          >
+            {deduping ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Trash2 size={14} />
+            )}
+            {deduping ? "Removendo..." : "Remover Duplicatas"}
+          </button>
         </div>
 
         {/* Resultado da sincronização */}
@@ -502,6 +558,49 @@ export default function ConfiguracoesPage() {
               </p>
               <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
                 {syncError}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Resultado da deduplicação */}
+        {dedupResult && (
+          <div
+            className="mt-4 flex items-start gap-3 text-sm rounded-xl"
+            style={{
+              background: "rgba(168,85,247,0.06)",
+              border: "1px solid rgba(168,85,247,0.15)",
+              padding: "14px 18px",
+            }}
+          >
+            <Trash2 size={18} style={{ color: "#a855f7", flexShrink: 0, marginTop: 1 }} />
+            <div>
+              <p className="font-semibold" style={{ color: "#a855f7" }}>
+                Deduplicação concluída!
+              </p>
+              <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
+                {dedupResult}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {dedupError && (
+          <div
+            className="mt-4 flex items-start gap-3 text-sm rounded-xl"
+            style={{
+              background: "rgba(239,68,68,0.06)",
+              border: "1px solid rgba(239,68,68,0.15)",
+              padding: "14px 18px",
+            }}
+          >
+            <XCircle size={18} style={{ color: "#ef4444", flexShrink: 0, marginTop: 1 }} />
+            <div>
+              <p className="font-semibold" style={{ color: "#ef4444" }}>
+                Erro na deduplicação
+              </p>
+              <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
+                {dedupError}
               </p>
             </div>
           </div>

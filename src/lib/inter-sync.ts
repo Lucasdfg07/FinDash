@@ -223,18 +223,33 @@ async function processTransaction(t: InterTransacao): Promise<void> {
   const type = mapTransactionType(t.tipoTransacao, t.tipoOperacao);
   const date = new Date(t.dataEntrada + "T12:00:00Z");
 
-  // Verifica se já existe uma transação com mesma data, descrição e valor
+  // ──────────────────────────────────────────────
+  // DEDUPLICAÇÃO INTELIGENTE
+  // A API do Inter pode retornar a mesma transação com:
+  //  - datas ligeiramente diferentes (data operação vs data entrada)
+  //  - descrições diferentes (formato do título varia)
+  // Então checamos: mesmo valor + mesmo tipo + janela de ±2 dias
+  // ──────────────────────────────────────────────
+
+  const dateMin = new Date(date);
+  dateMin.setDate(dateMin.getDate() - 2);
+  const dateMax = new Date(date);
+  dateMax.setDate(dateMax.getDate() + 2);
+
   const existing = await prisma.transaction.findFirst({
     where: {
-      date: date,
-      description: t.titulo || t.descricao,
       amount: amount,
+      type: type,
       source: "inter_api",
+      date: {
+        gte: dateMin,
+        lte: dateMax,
+      },
     },
   });
 
   if (existing) {
-    throw new Error("Transaction already exists");
+    throw new Error("Transaction already exists (dedup: same amount+type within ±2 days)");
   }
 
   // Tenta categorizar automaticamente
@@ -330,6 +345,117 @@ async function processCardTransaction(
 }
 
 // ═══════════════════════════════════════════════════
+// LIMPEZA DE DUPLICATAS EXISTENTES
+// ═══════════════════════════════════════════════════
+
+export interface DeduplicationResult {
+  totalAnalyzed: number;
+  duplicatesRemoved: number;
+  details: Array<{
+    kept: { id: string; date: string; description: string; amount: number };
+    removed: { id: string; date: string; description: string; amount: number };
+  }>;
+}
+
+/**
+ * Remove transações duplicadas já existentes no banco de dados.
+ * 
+ * Critério de duplicata:
+ *  - Mesmo valor (amount)
+ *  - Mesmo tipo (type)
+ *  - Mesma fonte (source = "inter_api")
+ *  - Datas dentro de uma janela de ±2 dias
+ * 
+ * Quando encontra duplicatas, mantém a que tem categoria atribuída,
+ * ou a mais antiga (primeira inserida). Remove as demais.
+ */
+export async function removeDuplicateTransactions(): Promise<DeduplicationResult> {
+  const result: DeduplicationResult = {
+    totalAnalyzed: 0,
+    duplicatesRemoved: 0,
+    details: [],
+  };
+
+  // Busca todas as transações da API do Inter, ordenadas por data
+  const allTransactions = await prisma.transaction.findMany({
+    where: { source: "inter_api" },
+    orderBy: [{ date: "asc" }, { createdAt: "asc" }],
+  });
+
+  result.totalAnalyzed = allTransactions.length;
+
+  // IDs já marcados para remoção (para não remover duplamente)
+  const idsToRemove = new Set<string>();
+
+  for (let i = 0; i < allTransactions.length; i++) {
+    const current = allTransactions[i];
+
+    // Pula se já está marcada para remoção
+    if (idsToRemove.has(current.id)) continue;
+
+    for (let j = i + 1; j < allTransactions.length; j++) {
+      const candidate = allTransactions[j];
+
+      // Pula se já está marcada para remoção
+      if (idsToRemove.has(candidate.id)) continue;
+
+      // Verifica: mesmo valor e mesmo tipo
+      if (current.amount !== candidate.amount || current.type !== candidate.type) {
+        continue;
+      }
+
+      // Verifica: janela de ±2 dias
+      const diffMs = Math.abs(current.date.getTime() - candidate.date.getTime());
+      const diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+      if (diffDays > 2) continue;
+
+      // É duplicata! Decidir qual manter:
+      // - Preferência 1: a que tem categoria atribuída
+      // - Preferência 2: a mais antiga (pelo createdAt)
+      let toKeep = current;
+      let toRemove = candidate;
+
+      if (!current.categoryId && candidate.categoryId) {
+        toKeep = candidate;
+        toRemove = current;
+      }
+
+      idsToRemove.add(toRemove.id);
+
+      result.details.push({
+        kept: {
+          id: toKeep.id,
+          date: toKeep.date.toISOString().split("T")[0],
+          description: toKeep.description,
+          amount: toKeep.amount,
+        },
+        removed: {
+          id: toRemove.id,
+          date: toRemove.date.toISOString().split("T")[0],
+          description: toRemove.description,
+          amount: toRemove.amount,
+        },
+      });
+    }
+  }
+
+  // Remove todas as duplicatas encontradas
+  if (idsToRemove.size > 0) {
+    await prisma.transaction.deleteMany({
+      where: { id: { in: Array.from(idsToRemove) } },
+    });
+    result.duplicatesRemoved = idsToRemove.size;
+  }
+
+  console.log(
+    `[Dedup] Analisadas: ${result.totalAnalyzed}, Duplicatas removidas: ${result.duplicatesRemoved}`
+  );
+
+  return result;
+}
+
+// ═══════════════════════════════════════════════════
 // SYNC COMPLETO
 // ═══════════════════════════════════════════════════
 
@@ -395,7 +521,18 @@ export async function fullSync(
       result.faturas = { total: 0, created: 0, skipped: 0, errors: 1 };
     }
 
-    // 4. Salva timestamp da última sincronização
+    // 4. Roda deduplicação automática após sync
+    console.log("[Inter Sync] Executando deduplicação automática...");
+    try {
+      const dedupResult = await removeDuplicateTransactions();
+      console.log(
+        `[Inter Sync] Dedup: ${dedupResult.duplicatesRemoved} duplicatas removidas`
+      );
+    } catch (err) {
+      console.error("[Inter Sync] Erro na deduplicação:", err);
+    }
+
+    // 5. Salva timestamp da última sincronização
     await prisma.setting.upsert({
       where: { key: "inter_last_sync" },
       update: { value: new Date().toISOString() },

@@ -7,7 +7,7 @@ import {
   CreditCard,
 } from "lucide-react";
 import { formatCurrency, formatDate, formatMonthYear } from "@/lib/utils";
-import DateRangeFilter, { DateRange, filterByDateRange } from "@/components/shared/DateRangeFilter";
+import DateRangeFilter, { DateRange, filterByDateRange, getPresetRange } from "@/components/shared/DateRangeFilter";
 import PageLoading from "@/components/shared/PageLoading";
 
 interface CardTransaction {
@@ -27,7 +27,7 @@ export default function FaturasPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [monthFilter, setMonthFilter] = useState("all");
-  const [dateRange, setDateRange] = useState<DateRange>({ startDate: "", endDate: "" });
+  const [dateRange, setDateRange] = useState<DateRange>(() => getPresetRange(-1));
 
   useEffect(() => {
     fetch("/api/card-transactions")

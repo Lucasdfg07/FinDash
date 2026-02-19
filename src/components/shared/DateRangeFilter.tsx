@@ -32,7 +32,7 @@ function formatDisplayDate(dateStr: string): string {
   return `${day}/${month}/${year}`;
 }
 
-function getPresetRange(days: number): DateRange {
+export function getPresetRange(days: number): DateRange {
   const now = new Date();
 
   if (days === 0) {

@@ -19,7 +19,7 @@ import AdsSpendChart from "@/components/charts/AdsSpendChart";
 import CategoryPieChart from "@/components/charts/CategoryPieChart";
 import TopExpensesChart from "@/components/charts/TopExpensesChart";
 import FixedVsVariableChart from "@/components/charts/FixedVsVariableChart";
-import DateRangeFilter, { DateRange } from "@/components/shared/DateRangeFilter";
+import DateRangeFilter, { DateRange, getPresetRange } from "@/components/shared/DateRangeFilter";
 import DrillDownPanel, { DrillDownFilter } from "@/components/shared/DrillDownPanel";
 import PageLoading from "@/components/shared/PageLoading";
 
@@ -112,7 +112,7 @@ function KpiCard({
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState<DateRange>({ startDate: "", endDate: "" });
+  const [dateRange, setDateRange] = useState<DateRange>(() => getPresetRange(-1));
   const [drillDown, setDrillDown] = useState<DrillDownFilter | null>(null);
 
   const fetchData = useCallback((range: DateRange) => {

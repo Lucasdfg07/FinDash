@@ -173,6 +173,23 @@ function extractRecipientName(
   return null;
 }
 
+/**
+ * Compara dois nomes de destinatários usando substring match.
+ * 
+ * Necessário porque a API do Inter pode retornar nomes com sufixos extras:
+ *  - API: "ANABELA MARTINS DOS SANTOS 0" vs bank_extract: "ANABELA MARTINS DOS SANTOS"
+ *  - API: "DEMERGE BRASIL FACILITADORA" vs bank_extract: "DEMERGE BRASIL"
+ * 
+ * Se um nome CONTÉM o outro → mesma pessoa.
+ * Se nenhum contém o outro → pessoas diferentes.
+ */
+function recipientNamesMatch(name1: string, name2: string): boolean {
+  const a = name1.trim();
+  const b = name2.trim();
+  if (a === b) return true;
+  return a.includes(b) || b.includes(a);
+}
+
 // ═══════════════════════════════════════════════════
 // SYNC EXTRATO (Transações bancárias)
 // ═══════════════════════════════════════════════════
@@ -308,7 +325,8 @@ async function processTransaction(t: InterTransacao): Promise<void> {
 
     // Se AMBOS têm destinatários identificáveis e são DIFERENTES
     // → NÃO é duplicata (ex: pro-labore para sócios diferentes)
-    if (newRecipient && existingRecipient && newRecipient !== existingRecipient) {
+    // Usa substring match para lidar com nomes truncados/expandidos
+    if (newRecipient && existingRecipient && !recipientNamesMatch(newRecipient, existingRecipient)) {
       continue;
     }
 
@@ -482,7 +500,7 @@ export async function removeDuplicateTransactions(): Promise<DeduplicationResult
       const name1 = extractRecipientName(current.description, current.recipient);
       const name2 = extractRecipientName(candidate.description, candidate.recipient);
 
-      if (name1 && name2 && name1 !== name2) {
+      if (name1 && name2 && !recipientNamesMatch(name1, name2)) {
         continue;
       }
 

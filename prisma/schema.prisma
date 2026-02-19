@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now())
+}
+
+// ========================
+// CATEGORIAS DE GASTOS
+// ========================
+model Category {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  color       String      @default("#6366f1")
+  icon        String      @default("folder")
+  type        String      @default("expense") // expense | income
+  createdAt   DateTime    @default(now())
+  fixedCosts  FixedCost[]
+  transactions Transaction[]
+  cardTransactions CardTransaction[]
+}
+
+// ========================
+// CUSTOS FIXOS (RECORRENTES)
+// ========================
+model FixedCost {
+  id          String   @id @default(cuid())
+  name        String
+  amount      Float
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+  subcategory String?  // "Funcionários", "Ferramentas e Software", etc.
+  recurrence  String   @default("monthly") // monthly | annual | quarterly
+  renewalDate String?  // "Jan", "Set", etc. para anuais
+  notes       String?
+  active      Boolean  @default(true)
+  startDate   DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ========================
+// TRANSAÇÕES BANCÁRIAS (EXTRATO)
+// ========================
+model Transaction {
+  id          String   @id @default(cuid())
+  date        DateTime
+  description String
+  amount      Float    // positivo = entrada, negativo = saída
+  balance     Float?   // saldo após transação
+  type        String   // pix_sent | pix_received | payment | application | tax | other
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+  recipient   String?  // nome do destinatário/remetente
+  source      String   @default("bank_extract") // bank_extract | manual
+  createdAt   DateTime @default(now())
+}
+
+// ========================
+// TRANSAÇÕES CARTÃO DE CRÉDITO
+// ========================
+model CardTransaction {
+  id          String   @id @default(cuid())
+  date        DateTime
+  description String
+  amount      Float    // negativo = débito, positivo = crédito/pagamento
+  card        String?  // últimos 4 dígitos
+  category    Category? @relation(fields: [categoryId], references: [id])
+  categoryId  String?
+  cardCategory String? // categoria do Inter: SERVICOS, COMPRAS, OUTROS, ENSINO, VESTUARIO
+  type        String?  // "Compra à vista", "Parcela X/Y"
+  invoiceMonth String  // "2025-12", "2026-01", etc.
+  source      String   @default("card_invoice") // card_invoice | manual
+  createdAt   DateTime @default(now())
+}
+
+// ========================
+// CONFIGURAÇÕES DO DASHBOARD
+// ========================
+model Setting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+}

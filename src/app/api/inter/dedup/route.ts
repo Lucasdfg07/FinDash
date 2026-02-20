@@ -11,8 +11,13 @@ import { removeDuplicateTransactions } from "@/lib/inter-sync";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { requireAuthMiddleware } from "@/lib/auth-utils";
 import { auditSuccess, auditAuthFailure, auditRateLimitExceeded } from "@/lib/audit-logger";
+import { handleCORS, addCORSHeaders } from "@/lib/cors";
 
 const ENDPOINT = "/api/inter/dedup";
+
+export async function OPTIONS(request: NextRequest) {
+  return await handleCORS(request) || new NextResponse(null, { status: 405 });
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,20 +55,23 @@ export async function POST(request: NextRequest) {
       duplicatesRemoved: result.duplicatesRemoved,
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       totalAnalyzed: result.totalAnalyzed,
       duplicatesRemoved: result.duplicatesRemoved,
       details: result.details,
     });
+
+    return addCORSHeaders(response, request.headers.get("origin"));
   } catch (err) {
     console.error("[Dedup API] Erro:", err);
-    return NextResponse.json(
+    const errorResponse = NextResponse.json(
       {
         success: false,
         error: err instanceof Error ? err.message : "Erro desconhecido",
       },
       { status: 500 }
     );
+    return addCORSHeaders(errorResponse, request.headers.get("origin"));
   }
 }

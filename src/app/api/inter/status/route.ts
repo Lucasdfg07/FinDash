@@ -4,8 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { requireAuthMiddleware } from "@/lib/auth-utils";
 import { auditSuccess, auditAuthFailure, auditRateLimitExceeded } from "@/lib/audit-logger";
+import { handleCORS, addCORSHeaders } from "@/lib/cors";
 
 const ENDPOINT = "/api/inter/status";
+
+export async function OPTIONS(request: NextRequest) {
+  return await handleCORS(request) || new NextResponse(null, { status: 405 });
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -65,9 +70,10 @@ export async function GET(request: NextRequest) {
       status: status.connected,
     });
 
-    return NextResponse.json(responseData);
+    const response = NextResponse.json(responseData);
+    return addCORSHeaders(response, request.headers.get("origin"));
   } catch (error) {
-    return NextResponse.json(
+    const errorResponse = NextResponse.json(
       {
         configured: false,
         connected: false,
@@ -75,5 +81,6 @@ export async function GET(request: NextRequest) {
       },
       { status: 500 }
     );
+    return addCORSHeaders(errorResponse, request.headers.get("origin"));
   }
 }

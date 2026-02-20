@@ -13,8 +13,13 @@ import {
 } from "@/lib/audit-logger";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { handleCORS, addCORSHeaders } from "@/lib/cors";
 
 const ENDPOINT = "/api/inter/sync";
+
+export async function OPTIONS(request: NextRequest) {
+  return await handleCORS(request) || new NextResponse(null, { status: 405 });
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -75,11 +80,13 @@ export async function POST(request: NextRequest) {
       faturas: result.faturas,
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: "Sincronização concluída com sucesso",
       ...result,
     });
+
+    return addCORSHeaders(response, request.headers.get("origin"));
   } catch (error) {
     console.error("[Inter Sync] Erro:", error);
 
@@ -110,7 +117,7 @@ export async function POST(request: NextRequest) {
         "Não foi possível conectar à API do Inter. Verifique sua conexão com a internet.";
     }
 
-    return NextResponse.json(
+    const errorResponse = NextResponse.json(
       {
         success: false,
         error: userMessage,
@@ -118,5 +125,7 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     );
+
+    return addCORSHeaders(errorResponse, request.headers.get("origin"));
   }
 }

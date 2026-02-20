@@ -1,0 +1,53 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_run:
+    workflows: [CI Pipeline]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy to Railway
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'push'
+    environment:
+      name: production
+      url: https://findash-production.up.railway.app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Railway
+        run: |
+          echo "🚀 Deploying to Railway..."
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref }}"
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Verify Deployment
+        run: |
+          echo "✅ Deployment successful!"
+          echo "App URL: https://findash-production.up.railway.app"
+
+      - name: Notify Slack
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "✅ Findash deployed to production",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*🚀 Deployment Successful*\n*Branch:* `main`\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}"
+                  }
+                }
+              ]
+            }
+        if: always()

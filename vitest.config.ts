@@ -21,14 +21,15 @@ export default defineConfig({
       exclude: [
         'node_modules/',
         'vitest.setup.ts',
+        'e2e/**',
         '**/*.d.ts',
         '**/*.config.*',
         '**/dist/**',
       ],
     },
 
-    // Padrão de arquivos de teste
-    include: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx'],
+    // Padrão de arquivos de teste (apenas unit tests, não E2E)
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
 
     // Timeout padrão
     testTimeout: 10000,

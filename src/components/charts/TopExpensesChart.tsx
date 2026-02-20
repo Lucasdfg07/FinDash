@@ -93,7 +93,7 @@ export function TopExpensesChart({
                 fontFamily: "monospace",
                 backdropFilter: "blur(20px)",
               }}
-              formatter={(value: number) => [formatCurrency(value), "Valor"]}
+              formatter={(value: number | undefined) => [value !== undefined ? formatCurrency(value) : "R$ 0", "Valor"]}
               labelStyle={{ color: ct.tooltipColor, fontWeight: 600 }}
               cursor={{ fill: ct.cursorFill }}
             />

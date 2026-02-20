@@ -32,7 +32,7 @@ export function AdsSpendChart({ data, onBarClick }: Props) {
     month: formatMonthYear(d.month),
   }));
 
-  const handleClick = (dataKey: "metaAds" | "googleAds") => (entry: Record<string, unknown>) => {
+  const handleClick = (dataKey: "metaAds" | "googleAds") => (entry: any) => {
     if (!onBarClick || !entry) return;
     const rawMonth = entry.rawMonth as string;
     const label = entry.month as string;
@@ -84,8 +84,8 @@ export function AdsSpendChart({ data, onBarClick }: Props) {
                 fontFamily: "monospace",
                 backdropFilter: "blur(20px)",
               }}
-              formatter={(value: number, name: string) => [
-                formatCurrency(value),
+              formatter={(value: number | undefined, name: string | undefined) => [
+                value !== undefined ? formatCurrency(value) : "R$ 0",
                 name === "metaAds" ? "Meta (Facebook)" : "Google Ads",
               ]}
               labelStyle={{ color: ct.tooltipColor, fontWeight: 600 }}

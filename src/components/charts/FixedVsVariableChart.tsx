@@ -65,8 +65,8 @@ export function FixedVsVariableChart({ data }: { data: MonthlyData[] }) {
                 fontFamily: "monospace",
                 backdropFilter: "blur(20px)",
               }}
-              formatter={(value: number, name: string) => [
-                formatCurrency(value),
+              formatter={(value: number | undefined, name: string | undefined) => [
+                value !== undefined ? formatCurrency(value) : "R$ 0",
                 name === "fixo" ? "Custo Fixo" : "Custo Variável",
               ]}
               labelStyle={{ color: ct.tooltipColor, fontWeight: 600 }}

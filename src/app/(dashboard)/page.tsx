@@ -14,11 +14,11 @@ import {
   Zap,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import RevenueExpenseChart from "@/components/charts/RevenueExpenseChart";
-import AdsSpendChart from "@/components/charts/AdsSpendChart";
-import CategoryPieChart from "@/components/charts/CategoryPieChart";
-import TopExpensesChart from "@/components/charts/TopExpensesChart";
-import FixedVsVariableChart from "@/components/charts/FixedVsVariableChart";
+import { RevenueExpenseChart } from "@/components/charts/RevenueExpenseChart";
+import { AdsSpendChart } from "@/components/charts/AdsSpendChart";
+import { CategoryPieChart } from "@/components/charts/CategoryPieChart";
+import { TopExpensesChart } from "@/components/charts/TopExpensesChart";
+import { FixedVsVariableChart } from "@/components/charts/FixedVsVariableChart";
 import DateRangeFilter, { DateRange, getPresetRange } from "@/components/shared/DateRangeFilter";
 import DrillDownPanel, { DrillDownFilter } from "@/components/shared/DrillDownPanel";
 import PageLoading from "@/components/shared/PageLoading";

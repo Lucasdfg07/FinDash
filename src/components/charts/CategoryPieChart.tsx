@@ -89,7 +89,7 @@ export function CategoryPieChart({ data, onCategoryClick }: Props) {
                   fontFamily: "monospace",
                   backdropFilter: "blur(20px)",
                 }}
-                formatter={(value: number) => [formatCurrency(value), ""]}
+                formatter={(value: number | undefined) => [value !== undefined ? formatCurrency(value) : "R$ 0", ""]}
               />
             </PieChart>
           </ResponsiveContainer>

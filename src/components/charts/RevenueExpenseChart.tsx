@@ -37,7 +37,7 @@ export function RevenueExpenseChart({ data, onBarClick }: Props) {
     totalExpenses: d.expenses + d.cardExpenses,
   }));
 
-  const handleClick = (dataKey: string) => (entry: Record<string, unknown>) => {
+  const handleClick = (dataKey: string) => (entry: any) => {
     if (!onBarClick || !entry) return;
     const rawMonth = entry.rawMonth as string;
     const label = entry.month as string;
@@ -92,8 +92,8 @@ export function RevenueExpenseChart({ data, onBarClick }: Props) {
                 fontFamily: "monospace",
                 backdropFilter: "blur(20px)",
               }}
-              formatter={(value: number, name: string) => [
-                formatCurrency(value),
+              formatter={(value: number | undefined, name: string | undefined) => [
+                value !== undefined ? formatCurrency(value) : "R$ 0",
                 name === "revenue" ? "Receita" : "Despesas Totais",
               ]}
               labelStyle={{ color: ct.tooltipColor, fontWeight: 600 }}

@@ -1,16 +1,36 @@
 /**
  * API Route: Remoção de transações duplicadas
  * POST /api/inter/dedup
- * 
+ *
  * Remove transações duplicadas importadas pela API do Inter.
  * Critério: mesmo valor + mesmo tipo + mesma fonte + datas dentro de ±2 dias.
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { removeDuplicateTransactions } from "@/lib/inter-sync";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { requireAuthMiddleware } from "@/lib/auth-utils";
 
-export async function POST() {
+const ENDPOINT = "/api/inter/dedup";
+
+export async function POST(request: NextRequest) {
   try {
+    // 1. ✅ Verificar autenticação (NOVO)
+    const authError = await requireAuthMiddleware(request);
+    if (authError) return authError;
+
+    // 2. ✅ Verificar rate limit (NOVO)
+    const { allowed, resetIn } = await checkRateLimit(request, ENDPOINT);
+    if (!allowed) {
+      return NextResponse.json(
+        {
+          error: "Too many requests",
+          message: `Rate limit exceeded. Try again in ${Math.ceil(resetIn / 1000)} seconds.`,
+        },
+        { status: 429 }
+      );
+    }
+
     console.log("[Dedup API] Iniciando remoção de duplicatas...");
 
     const result = await removeDuplicateTransactions();

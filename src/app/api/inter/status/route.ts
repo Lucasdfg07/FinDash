@@ -1,11 +1,29 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { checkConnection } from "@/lib/inter-api";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { requireAuthMiddleware } from "@/lib/auth-utils";
 
-const prisma = new PrismaClient();
+const ENDPOINT = "/api/inter/status";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // 1. ✅ Verificar autenticação (NOVO)
+    const authError = await requireAuthMiddleware(request);
+    if (authError) return authError;
+
+    // 2. ✅ Verificar rate limit (NOVO)
+    const { allowed, resetIn } = await checkRateLimit(request, ENDPOINT);
+    if (!allowed) {
+      return NextResponse.json(
+        {
+          error: "Too many requests",
+          message: `Rate limit exceeded. Try again in ${Math.ceil(resetIn / 1000)} seconds.`,
+        },
+        { status: 429 }
+      );
+    }
+
     const status = await checkConnection();
 
     // Busca última sincronização
@@ -20,11 +38,11 @@ export async function GET() {
 
     // Conta transações importadas do Inter
     const interTransactions = await prisma.transaction.count({
-      where: { source: "inter_api" },
+      where: { source: "bank_extract" },
     });
 
     const interCardTransactions = await prisma.cardTransaction.count({
-      where: { source: "inter_api" },
+      where: { source: "card_invoice" },
     });
 
     return NextResponse.json({

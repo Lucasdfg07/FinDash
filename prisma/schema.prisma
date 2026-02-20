@@ -92,3 +92,23 @@ model Setting {
   key   String @unique
   value String
 }
+
+// ========================
+// AUDIT LOG (RASTREAMENTO DE SEGURANÇA)
+// ========================
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?  // null se acesso não autenticado
+  action    String   // "login_attempt", "sync_initiated", "dedup_executed", etc
+  resource  String   // "/api/inter/sync", "/api/transactions", etc
+  status    String   // "success" | "failure"
+  details   String?  // JSON com detalhes da ação
+  ip        String?  // IP do cliente
+  userAgent String?  // User-Agent do cliente
+  timestamp DateTime @default(now())
+
+  // Índices para queries rápidas
+  @@index([userId])
+  @@index([action])
+  @@index([timestamp])
+}

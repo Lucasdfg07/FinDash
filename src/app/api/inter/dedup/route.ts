@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { removeDuplicateTransactions } from "@/lib/inter-sync";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { requireAuthMiddleware } from "@/lib/auth-utils";
+import { auditSuccess, auditAuthFailure, auditRateLimitExceeded } from "@/lib/audit-logger";
 
 const ENDPOINT = "/api/inter/dedup";
 
@@ -17,11 +18,15 @@ export async function POST(request: NextRequest) {
   try {
     // 1. ✅ Verificar autenticação (NOVO)
     const authError = await requireAuthMiddleware(request);
-    if (authError) return authError;
+    if (authError) {
+      await auditAuthFailure(request, "Authentication middleware rejected");
+      return authError;
+    }
 
     // 2. ✅ Verificar rate limit (NOVO)
     const { allowed, resetIn } = await checkRateLimit(request, ENDPOINT);
     if (!allowed) {
+      await auditRateLimitExceeded(request, ENDPOINT);
       return NextResponse.json(
         {
           error: "Too many requests",
@@ -38,6 +43,12 @@ export async function POST(request: NextRequest) {
     console.log(
       `[Dedup API] Concluído: ${result.duplicatesRemoved} duplicatas removidas de ${result.totalAnalyzed} transações`
     );
+
+    // Log successful dedup execution
+    await auditSuccess(request, "dedup_executed", ENDPOINT, {
+      totalAnalyzed: result.totalAnalyzed,
+      duplicatesRemoved: result.duplicatesRemoved,
+    });
 
     return NextResponse.json({
       success: true,

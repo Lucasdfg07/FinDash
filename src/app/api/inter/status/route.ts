@@ -3,6 +3,7 @@ import { checkConnection } from "@/lib/inter-api";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { requireAuthMiddleware } from "@/lib/auth-utils";
+import { auditSuccess, auditAuthFailure, auditRateLimitExceeded } from "@/lib/audit-logger";
 
 const ENDPOINT = "/api/inter/status";
 
@@ -10,11 +11,15 @@ export async function GET(request: NextRequest) {
   try {
     // 1. ✅ Verificar autenticação (NOVO)
     const authError = await requireAuthMiddleware(request);
-    if (authError) return authError;
+    if (authError) {
+      await auditAuthFailure(request, "Authentication middleware rejected");
+      return authError;
+    }
 
     // 2. ✅ Verificar rate limit (NOVO)
     const { allowed, resetIn } = await checkRateLimit(request, ENDPOINT);
     if (!allowed) {
+      await auditRateLimitExceeded(request, ENDPOINT);
       return NextResponse.json(
         {
           error: "Too many requests",
@@ -45,7 +50,7 @@ export async function GET(request: NextRequest) {
       where: { source: "card_invoice" },
     });
 
-    return NextResponse.json({
+    const responseData = {
       ...status,
       lastSync: lastSyncSetting?.value || null,
       saldo: saldoSetting ? JSON.parse(saldoSetting.value) : null,
@@ -53,7 +58,14 @@ export async function GET(request: NextRequest) {
         transacoesImportadas: interTransactions,
         faturasImportadas: interCardTransactions,
       },
+    };
+
+    // Log successful status check
+    await auditSuccess(request, "sync_status_checked", ENDPOINT, {
+      status: status.connected,
     });
+
+    return NextResponse.json(responseData);
   } catch (error) {
     return NextResponse.json(
       {

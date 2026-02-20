@@ -5,6 +5,14 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { requireAuthMiddleware } from "@/lib/auth-utils";
 import { interSyncSchema } from "@/lib/schemas";
 import { ZodError } from "zod";
+import {
+  auditSuccess,
+  auditAuthFailure,
+  auditRateLimitExceeded,
+  auditInvalidInput,
+} from "@/lib/audit-logger";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 
 const ENDPOINT = "/api/inter/sync";
 
@@ -12,11 +20,15 @@ export async function POST(request: NextRequest) {
   try {
     // 1. ✅ Verificar autenticação (NOVO)
     const authError = await requireAuthMiddleware(request);
-    if (authError) return authError;
+    if (authError) {
+      await auditAuthFailure(request, "Authentication middleware rejected");
+      return authError;
+    }
 
     // 2. ✅ Verificar rate limit (NOVO)
     const { allowed, resetIn } = await checkRateLimit(request, ENDPOINT);
     if (!allowed) {
+      await auditRateLimitExceeded(request, ENDPOINT);
       return NextResponse.json(
         {
           error: "Too many requests",
@@ -33,10 +45,16 @@ export async function POST(request: NextRequest) {
 
     // 3. ✅ Validar input com Zod (NOVO)
     const body = await request.json().catch(() => ({}));
-    const validated = interSyncSchema.parse({
-      dataInicio: body.dataInicio || format(subMonths(new Date(), 3), "yyyy-MM-dd"),
-      dataFim: body.dataFim || format(new Date(), "yyyy-MM-dd"),
-    });
+    let validated;
+    try {
+      validated = interSyncSchema.parse({
+        dataInicio: body.dataInicio || format(subMonths(new Date(), 3), "yyyy-MM-dd"),
+        dataFim: body.dataFim || format(new Date(), "yyyy-MM-dd"),
+      });
+    } catch (validationError) {
+      await auditInvalidInput(request, ENDPOINT, (validationError as any).issues || validationError);
+      throw validationError;
+    }
 
     console.log(`[Inter Sync] Iniciando sincronização: ${validated.dataInicio} → ${validated.dataFim}`);
 
@@ -46,6 +64,15 @@ export async function POST(request: NextRequest) {
       extrato: result.extrato,
       faturas: result.faturas,
       saldo: result.saldo,
+    });
+
+    // Log successful sync
+    const session = await getServerSession(authOptions);
+    await auditSuccess(request, "sync_initiated", ENDPOINT, {
+      dataInicio: validated.dataInicio,
+      dataFim: validated.dataFim,
+      extrato: result.extrato,
+      faturas: result.faturas,
     });
 
     return NextResponse.json({

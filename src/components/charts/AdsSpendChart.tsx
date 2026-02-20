@@ -24,7 +24,7 @@ interface Props {
   onBarClick?: (params: { month: string; type: "metaAds" | "googleAds"; label: string }) => void;
 }
 
-export default function AdsSpendChart({ data, onBarClick }: Props) {
+export function AdsSpendChart({ data, onBarClick }: Props) {
   const ct = useChartTheme();
   const chartData = data.map((d) => ({
     ...d,

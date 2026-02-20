@@ -20,7 +20,7 @@ interface MonthlyData {
   cardExpenses: number;
 }
 
-export default function FixedVsVariableChart({ data }: { data: MonthlyData[] }) {
+export function FixedVsVariableChart({ data }: { data: MonthlyData[] }) {
   const ct = useChartTheme();
   const chartData = data.map((d) => ({
     month: formatMonthYear(d.month),

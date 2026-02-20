@@ -21,7 +21,7 @@ interface Props {
   onCategoryClick?: (params: { category: string; label: string }) => void;
 }
 
-export default function CategoryPieChart({ data, onCategoryClick }: Props) {
+export function CategoryPieChart({ data, onCategoryClick }: Props) {
   const ct = useChartTheme();
   const top = data.slice(0, 8);
   const rest = data.slice(8);

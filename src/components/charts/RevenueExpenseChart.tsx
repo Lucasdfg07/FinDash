@@ -28,7 +28,7 @@ interface Props {
   onBarClick?: (params: { month: string; type: "revenue" | "expenses"; label: string }) => void;
 }
 
-export default function RevenueExpenseChart({ data, onBarClick }: Props) {
+export function RevenueExpenseChart({ data, onBarClick }: Props) {
   const ct = useChartTheme();
   const chartData = data.map((d) => ({
     ...d,

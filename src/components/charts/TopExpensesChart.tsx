@@ -23,7 +23,7 @@ interface Props {
   onBarClick?: (params: { recipient: string; label: string }) => void;
 }
 
-export default function TopExpensesChart({
+export function TopExpensesChart({
   data,
   title,
   color,

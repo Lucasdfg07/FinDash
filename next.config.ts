@@ -6,9 +6,6 @@ const nextConfig: NextConfig = {
   // Performance Optimizations
   // ========================
 
-  // Enable SWR (Stale While Revalidate)
-  swcMinify: true,
-
   // Image optimization
   images: {
     formats: ["image/webp", "image/avif"],

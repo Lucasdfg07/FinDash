@@ -8,8 +8,6 @@
  */
 
 import https from "https";
-import fs from "fs";
-import path from "path";
 
 // ═══════════════════════════════════════════════════
 // TIPOS
@@ -82,45 +80,42 @@ function isTokenValid(): boolean {
 // ═══════════════════════════════════════════════════
 
 function getCertificates(): { cert: Buffer; key: Buffer } {
-  const certPath = path.resolve(
-    process.cwd(),
-    process.env.INTER_CERT_PATH || "./certs/inter.crt"
-  );
-  const keyPath = path.resolve(
-    process.cwd(),
-    process.env.INTER_KEY_PATH || "./certs/inter.key"
-  );
+  // Ler certificados do .env (base64) - SEGURO, não usa arquivos
+  const certPem = process.env.INTER_CERT_PEM;
+  const keyPem = process.env.INTER_KEY_PEM;
 
-  if (!fs.existsSync(certPath)) {
+  if (!certPem) {
     throw new Error(
-      `Certificado do Inter não encontrado em: ${certPath}. ` +
-        `Baixe o certificado em https://developers.inter.co e coloque na pasta certs/`
+      `Certificado do Inter não configurado. ` +
+        `Adicione INTER_CERT_PEM ao .env com o conteúdo base64 do certificado.`
     );
   }
 
-  if (!fs.existsSync(keyPath)) {
+  if (!keyPem) {
     throw new Error(
-      `Chave privada do Inter não encontrada em: ${keyPath}. ` +
-        `Baixe a chave em https://developers.inter.co e coloque na pasta certs/`
+      `Chave privada do Inter não configurada. ` +
+        `Adicione INTER_KEY_PEM ao .env com o conteúdo base64 da chave privada.`
     );
   }
 
-  return {
-    cert: fs.readFileSync(certPath),
-    key: fs.readFileSync(keyPath),
-  };
+  try {
+    // Converter de base64 para Buffer
+    const cert = Buffer.from(certPem, "base64");
+    const key = Buffer.from(keyPem, "base64");
+
+    return { cert, key };
+  } catch (error) {
+    throw new Error(
+      `Erro ao decodificar certificados do Inter. ` +
+        `Verifique se INTER_CERT_PEM e INTER_KEY_PEM estão em base64 válido. ` +
+        `Erro: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
 }
 
 export function hasCertificates(): boolean {
-  const certPath = path.resolve(
-    process.cwd(),
-    process.env.INTER_CERT_PATH || "./certs/inter.crt"
-  );
-  const keyPath = path.resolve(
-    process.cwd(),
-    process.env.INTER_KEY_PATH || "./certs/inter.key"
-  );
-  return fs.existsSync(certPath) && fs.existsSync(keyPath);
+  // Verificar se certificados estão configurados em .env
+  return !!(process.env.INTER_CERT_PEM && process.env.INTER_KEY_PEM);
 }
 
 // ═══════════════════════════════════════════════════

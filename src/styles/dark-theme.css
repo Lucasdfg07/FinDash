@@ -1,0 +1,154 @@
+/* Dark Mode Theme Variables */
+
+:root {
+  /* Light mode (default) */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --bg-tertiary: #efefef;
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --border-color: #e5e7eb;
+  --accent-color: #5a9cff;
+  --accent-dark: #4a8de0;
+  --success-color: #22c55e;
+  --warning-color: #f59e0b;
+  --error-color: #ef4444;
+  --chart-grid: rgba(0, 0, 0, 0.1);
+  --chart-axis: #6b7280;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+html[data-theme='light'] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --bg-tertiary: #efefef;
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --border-color: #e5e7eb;
+  --accent-color: #5a9cff;
+  --accent-dark: #4a8de0;
+  --success-color: #22c55e;
+  --warning-color: #f59e0b;
+  --error-color: #ef4444;
+  --chart-grid: rgba(0, 0, 0, 0.1);
+  --chart-axis: #6b7280;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+html[data-theme='dark'] {
+  --bg-primary: #1a1f2e;
+  --bg-secondary: #242d3d;
+  --bg-tertiary: #2d3748;
+  --text-primary: #e4e6eb;
+  --text-secondary: #b0b3b8;
+  --border-color: #3d4556;
+  --accent-color: #5a9cff;
+  --accent-dark: #4a8de0;
+  --success-color: #22c55e;
+  --warning-color: #f59e0b;
+  --error-color: #ef4444;
+  --chart-grid: rgba(255, 255, 255, 0.1);
+  --chart-axis: #b0b3b8;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Smooth transition for theme changes */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Disable transition for performance-critical elements */
+*[data-no-theme-transition] {
+  transition: none;
+}
+
+/* Apply theme colors to common elements */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+input,
+textarea,
+select {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+button {
+  transition: all 0.3s ease;
+}
+
+/* Chart-specific overrides */
+.recharts-wrapper {
+  background-color: var(--bg-secondary);
+}
+
+.recharts-surface {
+  background-color: transparent;
+}
+
+.recharts-cartesian-axis-tick-value {
+  fill: var(--chart-axis);
+}
+
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: var(--chart-grid);
+}
+
+/* Cards and containers */
+.card,
+[class*='card'] {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+  box-shadow: var(--shadow);
+}
+
+/* Links */
+a {
+  color: var(--accent-color);
+}
+
+a:hover {
+  color: var(--accent-dark);
+}
+
+/* Alerts and status colors */
+.alert-success {
+  background-color: rgba(34, 197, 94, 0.1);
+  color: var(--success-color);
+  border-color: var(--success-color);
+}
+
+.alert-warning {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: var(--warning-color);
+  border-color: var(--warning-color);
+}
+
+.alert-error {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--error-color);
+  border-color: var(--error-color);
+}
+
+/* Focus states for accessibility */
+button:focus,
+a:focus,
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* Remove outline for mouse users (accessibility best practice) */
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible),
+select:focus:not(:focus-visible) {
+  outline: none;
+}

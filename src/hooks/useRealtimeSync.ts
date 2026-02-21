@@ -31,6 +31,40 @@ export function useRealtimeSync(options: UseRealtimeSyncOptions = {}) {
     lastError: null as string | null,
   });
 
+  // Setup polling fallback
+  const setupPolling = useCallback(() => {
+    if (!session?.user) return;
+
+    console.log('[Polling] Starting fallback polling');
+
+    const poll = async () => {
+      try {
+        const sinceTimestamp = Math.floor(lastEventTime / 1000);
+        const response = await fetch(
+          `/api/dashboard?since=${sinceTimestamp}`
+        );
+
+        if (!response.ok) throw new Error('Polling failed');
+
+        const data = await response.json() as Record<string, unknown>;
+        const userId = (session?.user as { id?: string })?.id;
+        if (data.changed && userId) {
+          setLastEventTime(Date.now());
+          onEvent?.({
+            type: 'dashboard:invalidate',
+            data: { keys: Object.keys(data) },
+            timestamp: new Date().toISOString(),
+            userId,
+          });
+        }
+      } catch (error) {
+        console.error('[Polling] Error:', error);
+      }
+    };
+
+    pollIntervalRef.current = setInterval(poll, pollInterval);
+  }, [session?.user, lastEventTime, onEvent, pollInterval]);
+
   // Connect to WebSocket
   const connectWebSocket = useCallback(() => {
     if (!session?.user || !enabled) return;
@@ -110,41 +144,7 @@ export function useRealtimeSync(options: UseRealtimeSyncOptions = {}) {
       // Fallback to polling
       setupPolling();
     }
-  }, [session?.user, enabled, onEvent]);
-
-  // Setup polling fallback
-  const setupPolling = useCallback(() => {
-    if (!session?.user) return;
-
-    console.log('[Polling] Starting fallback polling');
-
-    const poll = async () => {
-      try {
-        const sinceTimestamp = Math.floor(lastEventTime / 1000);
-        const response = await fetch(
-          `/api/dashboard?since=${sinceTimestamp}`
-        );
-
-        if (!response.ok) throw new Error('Polling failed');
-
-        const data = await response.json();
-        const userId = (session?.user as any)?.id;
-        if (data.changed && userId) {
-          setLastEventTime(Date.now());
-          onEvent?.({
-            type: 'dashboard:invalidate',
-            data: { keys: Object.keys(data) },
-            timestamp: new Date().toISOString(),
-            userId,
-          });
-        }
-      } catch (error) {
-        console.error('[Polling] Error:', error);
-      }
-    };
-
-    pollIntervalRef.current = setInterval(poll, pollInterval);
-  }, [session?.user, lastEventTime, onEvent, pollInterval]);
+  }, [session?.user, enabled, onEvent, setupPolling]);
 
   // Subscribe to new channels
   const subscribe = useCallback((channel: string) => {

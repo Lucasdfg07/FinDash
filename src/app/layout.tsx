@@ -6,6 +6,8 @@ import { Providers } from "./providers";
 import { DarkModeProvider } from "@/context/DarkModeContext";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { PWAInitializer } from "@/components/PWAInitializer";
+import { MobileNavigation } from "@/components/MobileNavigation";
+import { SkipLink } from "@/components/SkipLink";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -38,8 +40,16 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className={inter.className}>
+        {/* Skip link for keyboard navigation accessibility */}
+        <SkipLink />
+
         <DarkModeProvider>
-          <Providers>{children}</Providers>
+          <Providers>
+            <MobileNavigation />
+            <main id="main-content" className="focus:outline-none">
+              {children}
+            </main>
+          </Providers>
           <OfflineIndicator />
           <PWAInitializer />
         </DarkModeProvider>

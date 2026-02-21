@@ -1,16 +1,15 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { isOriginAllowed } from './cors';
 
 describe('CORS Configuration', () => {
   beforeEach(() => {
-    // Reset environment
-    const nodeEnv = 'development';
+    vi.stubEnv('NODE_ENV', 'development');
     delete process.env.ALLOWED_ORIGINS;
   });
 
   describe('isOriginAllowed', () => {
     it('deve permitir localhost em desenvolvimento', () => {
-      const nodeEnv = 'development';
+      vi.stubEnv('NODE_ENV', 'development');
       expect(isOriginAllowed('http://localhost:3000')).toBe(true);
       expect(isOriginAllowed('http://localhost:3001')).toBe(true);
     });
@@ -24,38 +23,42 @@ describe('CORS Configuration', () => {
     });
 
     it('deve permitir origens customizadas via ALLOWED_ORIGINS', () => {
-      const nodeEnv = 'development';
-      process.env.ALLOWED_ORIGINS = 'https://example.com,https://app.example.com';
+      vi.stubEnv('NODE_ENV', 'development');
+      vi.stubEnv('ALLOWED_ORIGINS', 'https://example.com, https://app.example.com');
 
       expect(isOriginAllowed('https://example.com')).toBe(true);
       expect(isOriginAllowed('https://app.example.com')).toBe(true);
     });
 
     it('deve rejeitar origens não permitidas em produção', () => {
-      const nodeEnv = 'production';
-      process.env.ALLOWED_ORIGINS = 'https://app.example.com';
+      vi.stubEnv('NODE_ENV', 'production');
+      vi.stubEnv('ALLOWED_ORIGINS', 'https://app.example.com');
 
       expect(isOriginAllowed('http://localhost:3000')).toBe(false);
       expect(isOriginAllowed('https://malicious.com')).toBe(false);
     });
 
     it('deve permitir origem configurada em produção', () => {
-      const nodeEnv = 'production';
-      process.env.ALLOWED_ORIGINS = 'https://app.example.com';
+      vi.stubEnv('NODE_ENV', 'production');
+      vi.stubEnv('ALLOWED_ORIGINS', 'https://app.example.com');
 
       expect(isOriginAllowed('https://app.example.com')).toBe(true);
     });
 
     it('deve trimmar espaços em ALLOWED_ORIGINS', () => {
-      process.env.ALLOWED_ORIGINS = '  https://example.com  ,  https://app.example.com  ';
+      vi.stubEnv('NODE_ENV', 'development');
+      vi.stubEnv('ALLOWED_ORIGINS', '  https://example.com  ,  https://test.com  ');
+
       expect(isOriginAllowed('https://example.com')).toBe(true);
-      expect(isOriginAllowed('https://app.example.com')).toBe(true);
+      expect(isOriginAllowed('https://test.com')).toBe(true);
     });
 
     it('deve remover duplicatas de origens', () => {
-      process.env.ALLOWED_ORIGINS = 'http://localhost:3000,http://localhost:3000';
-      // Não deve causar erro, apenas remover duplicata
-      expect(isOriginAllowed('http://localhost:3000')).toBe(true);
+      vi.stubEnv('NODE_ENV', 'development');
+      vi.stubEnv('ALLOWED_ORIGINS', 'https://example.com,https://example.com,https://test.com');
+
+      expect(isOriginAllowed('https://example.com')).toBe(true);
+      expect(isOriginAllowed('https://test.com')).toBe(true);
     });
   });
 });

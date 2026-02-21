@@ -4,13 +4,13 @@ import { isOriginAllowed } from './cors';
 describe('CORS Configuration', () => {
   beforeEach(() => {
     // Reset environment
-    process.env.NODE_ENV = 'development';
+    const nodeEnv = 'development';
     delete process.env.ALLOWED_ORIGINS;
   });
 
   describe('isOriginAllowed', () => {
     it('deve permitir localhost em desenvolvimento', () => {
-      process.env.NODE_ENV = 'development';
+      const nodeEnv = 'development';
       expect(isOriginAllowed('http://localhost:3000')).toBe(true);
       expect(isOriginAllowed('http://localhost:3001')).toBe(true);
     });
@@ -24,7 +24,7 @@ describe('CORS Configuration', () => {
     });
 
     it('deve permitir origens customizadas via ALLOWED_ORIGINS', () => {
-      process.env.NODE_ENV = 'development';
+      const nodeEnv = 'development';
       process.env.ALLOWED_ORIGINS = 'https://example.com,https://app.example.com';
 
       expect(isOriginAllowed('https://example.com')).toBe(true);
@@ -32,7 +32,7 @@ describe('CORS Configuration', () => {
     });
 
     it('deve rejeitar origens não permitidas em produção', () => {
-      process.env.NODE_ENV = 'production';
+      const nodeEnv = 'production';
       process.env.ALLOWED_ORIGINS = 'https://app.example.com';
 
       expect(isOriginAllowed('http://localhost:3000')).toBe(false);
@@ -40,7 +40,7 @@ describe('CORS Configuration', () => {
     });
 
     it('deve permitir origem configurada em produção', () => {
-      process.env.NODE_ENV = 'production';
+      const nodeEnv = 'production';
       process.env.ALLOWED_ORIGINS = 'https://app.example.com';
 
       expect(isOriginAllowed('https://app.example.com')).toBe(true);

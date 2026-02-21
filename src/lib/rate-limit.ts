@@ -134,7 +134,6 @@ function getRequestIdentifier(request: NextRequest): string {
     forwardedFor?.split(",")[0].trim() ||
     realIp ||
     cf ||
-    request.ip ||
     "unknown";
 
   return `rate-limit:${ip}`;

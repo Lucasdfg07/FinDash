@@ -36,7 +36,7 @@ export function TopExpensesChart({
     name: d.name.length > 20 ? d.name.slice(0, 20) + "..." : d.name,
   }));
 
-  const handleClick = (entry: Record<string, unknown>) => {
+  const handleClick = (entry: any) => {
     if (!onBarClick || !entry) return;
     const fullName = entry.fullName as string;
     onBarClick({ recipient: fullName, label: fullName });

@@ -223,10 +223,14 @@ export function getHealthStatus(dbStatus: boolean, cacheStatus?: boolean): Healt
   const memUsage = process.memoryUsage();
   const memPercent = (memUsage.heapUsed / memUsage.heapTotal) * 100;
 
+  const database: 'ok' | 'error' = dbStatus ? 'ok' : 'error';
+  const cache: 'ok' | 'error' = cacheStatus ? 'ok' : 'error';
+  const memory: 'ok' | 'warning' | 'error' = memPercent > 90 ? 'error' : memPercent > 75 ? 'warning' : 'ok';
+
   const checks = {
-    database: dbStatus ? 'ok' : 'error' as const,
-    cache: cacheStatus ? 'ok' : 'error' as const,
-    memory: (memPercent > 90 ? 'error' : memPercent > 75 ? 'warning' : 'ok') as const,
+    database,
+    cache,
+    memory,
   };
 
   const dbOk = checks.database === 'ok';

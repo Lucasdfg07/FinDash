@@ -128,13 +128,14 @@ export function useRealtimeSync(options: UseRealtimeSyncOptions = {}) {
         if (!response.ok) throw new Error('Polling failed');
 
         const data = await response.json();
-        if (data.changed) {
+        const userId = (session?.user as any)?.id;
+        if (data.changed && userId) {
           setLastEventTime(Date.now());
           onEvent?.({
             type: 'dashboard:invalidate',
             data: { keys: Object.keys(data) },
             timestamp: new Date().toISOString(),
-            userId: session.user.id!,
+            userId,
           });
         }
       } catch (error) {

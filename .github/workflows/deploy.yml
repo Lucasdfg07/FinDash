@@ -3,51 +3,83 @@ name: Deploy to Production
 on:
   push:
     branches: [main]
-  workflow_run:
-    workflows: [CI Pipeline]
-    types: [completed]
-    branches: [main]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
 
 jobs:
-  deploy:
-    name: Deploy to Railway
+  test-and-build:
+    name: Test and Build
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'push'
-    environment:
-      name: production
-      url: https://findash-production.up.railway.app
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Deploy to Railway
-        run: |
-          echo "🚀 Deploying to Railway..."
-          echo "Commit: ${{ github.sha }}"
-          echo "Branch: ${{ github.ref }}"
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
-      - name: Verify Deployment
-        run: |
-          echo "✅ Deployment successful!"
-          echo "App URL: https://findash-production.up.railway.app"
-
-      - name: Notify Slack
-        uses: slackapi/slack-github-action@v1.24.0
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
-          payload: |
-            {
-              "text": "✅ Findash deployed to production",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*🚀 Deployment Successful*\n*Branch:* `main`\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}"
-                  }
-                }
-              ]
-            }
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Run type checking
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build application
+        run: npm run build
+
+  deploy:
+    name: Deploy to VPS
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: root
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts 2>/dev/null
+
+          ssh -i ~/.ssh/id_rsa $DEPLOY_USER@$DEPLOY_HOST << 'EOF'
+          set -e
+          echo "🚀 Starting deployment..."
+          cd /root/FinDash
+          git fetch origin main
+          git reset --hard origin/main
+          
+          docker-compose down
+          docker-compose build --no-cache
+          docker-compose up -d
+          
+          echo "⏳ Waiting for health check..."
+          for i in {1..30}; do
+            if docker-compose exec -T app curl -f http://localhost:3000/api/health >/dev/null 2>&1; then
+              echo "✅ Deployment successful!"
+              break
+            fi
+            sleep 2
+          done
+          EOF
+
+      - name: Notify completion
         if: always()
+        run: echo "✅ Deployment workflow completed"

@@ -107,7 +107,7 @@ export const getCachedDashboardSummary = cache(async (month: Date) => {
  * Get user settings
  * Cached during the same request
  */
-export const getCachedUserSettings = cache(async (userId: string) => {
+export const getCachedUserSettings = cache(async (_userId: string) => {
   const { prisma } = await import("./prisma");
 
   const settings = await prisma.setting.findMany({
@@ -144,7 +144,7 @@ export const invalidateDashboardCache = async () => {
   // In production, also invalidate Redis cache
   if (process.env.REDIS_URL) {
     try {
-      const redis = await import("redis");
+      // const redis = await import("redis");
       // const client = redis.createClient({ url: process.env.REDIS_URL });
       // await client.del("dashboard:*");
     } catch (error) {

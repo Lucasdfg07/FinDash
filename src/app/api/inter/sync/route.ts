@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
         dataFim: body.dataFim || format(new Date(), "yyyy-MM-dd"),
       });
     } catch (validationError) {
-      await auditInvalidInput(request, ENDPOINT, (validationError as any).issues || validationError);
+      await auditInvalidInput(request, ENDPOINT, (validationError as ZodError)?.issues || validationError);
       throw validationError;
     }
 
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Log successful sync
-    const session = await getServerSession(authOptions);
+    await getServerSession(authOptions);
     await auditSuccess(request, "sync_initiated", ENDPOINT, {
       dataInicio: validated.dataInicio,
       dataFim: validated.dataFim,
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: "Invalid request",
-          details: (error as any).issues || "Validation failed",
+          details: (error as ZodError)?.issues || "Validation failed",
         },
         { status: 400 }
       );

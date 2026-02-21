@@ -157,7 +157,7 @@ export class IsolationForestModel {
     }
 
     // Factor 4: Weekend vs weekday patterns
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const _isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     // Different rules could apply based on transaction type
 
     // Normalize score

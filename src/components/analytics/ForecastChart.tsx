@@ -1,9 +1,7 @@
 'use client';
 
 import {
-  LineChart,
   Line,
-  AreaChart,
   Area,
   XAxis,
   YAxis,
@@ -12,7 +10,6 @@ import {
   Legend,
   ResponsiveContainer,
   ComposedChart,
-  Bar,
 } from 'recharts';
 import { formatCurrency } from '@/lib/utils';
 import { useChartTheme } from '@/hooks/useChartTheme';
@@ -91,7 +88,7 @@ export function ForecastChart({ data, categoryName, title }: Props) {
                 fontFamily: 'monospace',
                 backdropFilter: 'blur(20px)',
               }}
-              formatter={(value: any) => formatCurrency(value)}
+              formatter={(value: number | undefined) => formatCurrency(value ?? 0)}
               labelStyle={{ color: ct.tooltipColor, fontWeight: 600 }}
             />
             <Legend

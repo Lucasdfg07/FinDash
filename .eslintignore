@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# AIOS Core (external dependency - do not lint)
+.aios-core/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Generated files
+coverage/
+.coverage/
+junit.xml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+.git/
+.gitignore

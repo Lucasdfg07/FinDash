@@ -24,7 +24,7 @@ describe('Analytics Aggregation', () => {
         },
       });
       categoryId = category.id;
-    } catch (error) {
+    } catch (_error) { // eslint-disable-line @typescript-eslint/no-unused-vars
       // Database not available in test environment
       console.log('[Test] Database not available, using mock data');
     }
@@ -70,7 +70,7 @@ describe('Analytics Aggregation', () => {
           })
         )
       );
-    } catch (error) {
+    } catch (_error) { // eslint-disable-line @typescript-eslint/no-unused-vars
       console.log('[Test] Could not create transactions - database not available');
     }
   });
@@ -84,7 +84,7 @@ describe('Analytics Aggregation', () => {
       await prisma.category.delete({
         where: { id: categoryId },
       });
-    } catch (error) {
+    } catch (_error) { // eslint-disable-line @typescript-eslint/no-unused-vars
       console.log('[Test] Cleanup skipped - database not available');
     }
     await clearAggregationCache();

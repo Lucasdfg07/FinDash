@@ -6,18 +6,20 @@ import { useEffect, useState } from 'react';
 
 export function OfflineIndicator() {
   const isOnline = useOnlineStatus();
-  const [showIndicator, setShowIndicator] = useState(false);
+  const [hideAfterOnline, setHideAfterOnline] = useState(false);
 
   useEffect(() => {
-    if (!isOnline) {
-      setShowIndicator(true);
-    } else {
-      // Hide indicator after 2 seconds when coming back online
-      const timer = setTimeout(() => setShowIndicator(false), 2000);
+    if (isOnline) {
+      // Show for 2 seconds when coming back online, then hide
+      const timer = setTimeout(() => setHideAfterOnline(true), 2000);
       return () => clearTimeout(timer);
+    } else {
+      // Reset when going offline
+      setHideAfterOnline(false);
     }
   }, [isOnline]);
 
+  const showIndicator = !isOnline || !hideAfterOnline;
   if (!showIndicator) return null;
 
   return (

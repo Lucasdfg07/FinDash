@@ -1,12 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
-import {
-  AnyRealtimeEvent,
-  TransactionData,
-  CategoryData,
-  FixedCostData,
-} from '@/types/realtime';
+import { AnyRealtimeEvent } from '@/types/realtime';
 
 interface RealtimeState {
   // Connection state

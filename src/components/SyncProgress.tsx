@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRealtimeStore } from '@/store/realtime';
-import { CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { CheckCircle, Loader } from 'lucide-react';
 
 /**
  * Bank Sync Progress Component
@@ -10,23 +10,22 @@ import { CheckCircle, AlertCircle, Loader } from 'lucide-react';
  */
 export function SyncProgress() {
   const bankSyncProgress = useRealtimeStore((state) => state.bankSyncProgress);
-  const [isVisible, setIsVisible] = useState(false);
+  const [hideComplete, setHideComplete] = useState(false);
 
-  // Show/hide based on sync status
+  // Hide completion message after 3 seconds
   useEffect(() => {
-    if (bankSyncProgress.status === 'syncing') {
-      setIsVisible(true);
-    } else if (bankSyncProgress.status === 'complete') {
-      // Show success for 3 seconds then hide
+    if (bankSyncProgress.status === 'complete' && !hideComplete) {
       const timeout = setTimeout(() => {
-        setIsVisible(false);
+        setHideComplete(true);
       }, 3000);
       return () => clearTimeout(timeout);
-    } else {
-      setIsVisible(false);
     }
-  }, [bankSyncProgress.status]);
+    if (bankSyncProgress.status === 'syncing') {
+      setHideComplete(false);
+    }
+  }, [bankSyncProgress.status, hideComplete]);
 
+  const isVisible = bankSyncProgress.status === 'syncing' || (bankSyncProgress.status === 'complete' && !hideComplete);
   if (!isVisible) return null;
 
   const { status, imported, duplicates } = bankSyncProgress;

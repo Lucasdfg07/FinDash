@@ -10,11 +10,11 @@ import { NextRequest, NextResponse } from "next/server";
  * Verificar se requisição está autenticada
  * Retorna session ou null se não autenticado
  */
-export async function requireAuth(request?: NextRequest) {
+export async function requireAuth(_request?: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     return session;
-  } catch (error) {
+  } catch (_error) { // eslint-disable-line @typescript-eslint/no-unused-vars
     return null;
   }
 }
@@ -27,7 +27,7 @@ export async function requireAuth(request?: NextRequest) {
  *   // ... resto do código
  * }
  */
-export async function requireAuthMiddleware(request: NextRequest) {
+export async function requireAuthMiddleware(_request: NextRequest) {
   const session = await getServerSession(authOptions);
 
   if (!session) {

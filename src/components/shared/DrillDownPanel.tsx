@@ -58,7 +58,6 @@ export default function DrillDownPanel({
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [sourceFilter, setSourceFilter] = useState<"all" | "bank" | "card">("all");
-  const [total, setTotal] = useState(0);
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Keyboard dismiss — Esc key
@@ -98,7 +97,6 @@ export default function DrillDownPanel({
       .then((r) => r.json())
       .then((data) => {
         setTransactions(data.transactions || []);
-        setTotal(data.total || 0);
       })
       .catch(console.error)
       .finally(() => setLoading(false));

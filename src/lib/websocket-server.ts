@@ -1,4 +1,4 @@
-import { WebSocketServer as WSServer } from 'ws';
+import { WebSocketServer as WSServer, WebSocket } from 'ws';
 import { Server as HTTPServer } from 'http';
 import { AnyRealtimeEvent, WebSocketMessage } from '@/types/realtime';
 
@@ -26,7 +26,7 @@ export class WebSocketManager {
 
     this.wss = new WSServer({ server: httpServer });
 
-    this.wss.on('connection', (ws, request) => {
+    this.wss.on('connection', (ws) => {
       const clientId = generateClientId();
       console.log(`[WS] Client ${clientId} connected`);
 
@@ -63,7 +63,7 @@ export class WebSocketManager {
    */
   private handleMessage(
     clientId: string,
-    ws: any,
+    ws: WebSocket,
     message: WebSocketMessage
   ): void {
     const connection = this.connections.get(clientId);

@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { Suspense, ComponentType, ReactNode } from 'react';
+import { Suspense, ReactNode } from 'react';
 
 /**
  * Dynamic chart wrapper

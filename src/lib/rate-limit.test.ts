@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { checkRateLimit } from './rate-limit';
-import { NextRequest } from 'next/server';
 
 // Mock NextRequest (simplificado para testes)
 const createMockRequest = (ip: string = '127.0.0.1'): any => {

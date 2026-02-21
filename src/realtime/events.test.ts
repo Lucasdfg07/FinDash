@@ -4,7 +4,6 @@ import {
   CategoryCreatedEvent,
   BankSyncStartEvent,
   BankSyncCompleteEvent,
-  AnyRealtimeEvent,
 } from '@/types/realtime';
 
 describe('Real-Time Events', () => {

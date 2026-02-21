@@ -16,6 +16,7 @@ function LoadingCard() {
   );
 }
 
+interface CategoryMetric {  name: string;  amount: number;  percentage?: number;}
 async function AnalyticsDashboard() {
   try {
     const [forecasts, anomalies, metrics] = await Promise.all([
@@ -60,7 +61,7 @@ async function AnalyticsDashboard() {
     );
 
     const comparativeCategories = (metricsThisMonth.byCategory || [])
-      .map((cat: any, idx: number) => ({
+      .map((cat: CategoryMetric, idx: number) => ({
         categoryId: idx.toString(),
         name: cat.name,
         currentAmount: cat.amount,

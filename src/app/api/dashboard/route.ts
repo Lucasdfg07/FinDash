@@ -42,6 +42,11 @@ export async function GET(request: NextRequest) {
     // Buscar categorias
     const categories = await prisma.category.findMany();
 
+    // Buscar saldo atualizado salvo pela sync do Inter
+    const interSaldoSetting = await prisma.setting.findUnique({
+      where: { key: "inter_saldo" },
+    });
+
     // ====== CÁLCULOS ======
 
     // Receita total (entradas no extrato)
@@ -184,8 +189,27 @@ export async function GET(request: NextRequest) {
     const categoryBreakdown = Object.values(expenseByCategory)
       .sort((a, b) => b.amount - a.amount);
 
-    // Saldo atual
-    const currentBalance = transactions.length > 0 ? transactions[0].balance || 0 : 0;
+    // Saldo atual:
+    // 1) Prioriza saldo oficial salvo em Setting.inter_saldo (getSaldo da API Inter)
+    // 2) Fallback para a transação mais recente com campo balance preenchido
+    // 3) Se nada disponível, retorna 0
+    let currentBalance = 0;
+    if (interSaldoSetting?.value) {
+      try {
+        const parsed = JSON.parse(interSaldoSetting.value) as { disponivel?: number };
+        if (typeof parsed.disponivel === "number" && Number.isFinite(parsed.disponivel)) {
+          currentBalance = parsed.disponivel;
+        }
+      } catch {
+        // Ignora parse inválido e usa fallback abaixo
+      }
+    }
+    if (currentBalance === 0) {
+      const latestWithBalance = transactions.find((t) => t.balance !== null && t.balance !== undefined);
+      if (latestWithBalance?.balance !== null && latestWithBalance?.balance !== undefined) {
+        currentBalance = latestWithBalance.balance;
+      }
+    }
 
     return NextResponse.json({
       summary: {
